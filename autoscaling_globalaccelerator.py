@@ -30,9 +30,7 @@ def lambda_handler(event, context):
     response = aga_client.describe_endpoint_group(
         EndpointGroupArn = ENDPOINT_GROUP_ARN
     )
-
     endpoints = []
-    
     if Lifecycle_Hook_Name == 'ASG-AGA-Launching': # Add the endpoint to the Accelerator
         for EndpointID in response['EndpointGroup']['EndpointDescriptions']:
             result = {'EndpointId': EndpointID['EndpointId'],'Weight': EndpointID['Weight'],'ClientIPPreservationEnabled': CLIENT_IP_PRESERVATION}
@@ -45,7 +43,7 @@ def lambda_handler(event, context):
                 result = {'EndpointId': EndpointID['EndpointId'],'Weight': EndpointID['Weight'],'ClientIPPreservationEnabled': CLIENT_IP_PRESERVATION}
         endpoints.append(result)
     
-
+    # Update the endpoint group
     response = aga_client.update_endpoint_group(
         EndpointGroupArn = ENDPOINT_GROUP_ARN,
         EndpointConfigurations = endpoints
