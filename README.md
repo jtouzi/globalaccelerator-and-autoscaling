@@ -154,7 +154,7 @@ $ aws iam put-role-policy \
 ```
 $ aws autoscaling put-lifecycle-hook \
 --lifecycle-hook-name ASG-AGA-Hook-Terminating \
---auto-scaling-group-name My-ASG-Group-Name \
+--auto-scaling-group-name MY-ASG-Group-Name \
 --notification-target-arn arn:aws:sns:us-west-2:0123456789012:AutoScaling-GlobalAccelerator-Topic \
 --role-arn arn:aws:iam::0123456789012:role/AutoScaling-GlobalAccelerator-Topic-Publisher-Role \
 --lifecycle-transition autoscaling:EC2_INSTANCE_TERMINATING \
@@ -192,24 +192,26 @@ The Lambda function uses modules included in the Python 3.7 Standard Library and
 5. Choose **Create function.**
 6. Your function is created; for it code, copy and paste the [Lambda function](autoscaling_globalaccelerator.py) from this GitHub repository.
 
-## Step 5 - Configuring the SNS topic with the Lambda function
-Auto Scaling lifecycle hooks can send notifications to CloudWatch Events, SNS or SQS, we will use Amazon SNS. For this we will need to subscribe the Lambda function to the SNS topic and grant permissions on the lambda function to the SNS topic.
+## Step 5 - Configure CloudWatch Events to trigger the Lambda function
 
-### Subscribe the Lambda function to the SNS topic
-```
-aws sns subscribe --protocol lambda \
---topic-arn arn:aws:sns:us-west-2:012345678901:ENI-Demo-Topic \
---notification-endpoint arn:aws:lambda:us-west-2:012345678901:function:AutoScaling-GlobalAccelerator
-```
-### Grant permissions on the lambda function to the SNS topic
-```
-aws lambda add-permission \
---function-name AutoScaling-GlobalAccelerator \
---statement-id GrantSNSPermission \
---action "lambda:InvokeFunction" \
---principal sns.amazonaws.com \
---source-arn arn:aws:sns:us-west-2:012345678901:AutoScaling-GlobalAccelerator-Topic
-```
+1. Log in to the [CloudWatch console](https://us-west-2.console.aws.amazon.com/cloudwatch/home?region=us-west-2#rules:).
+2. Under **Events** on the left, select **Rules** and then click **Create rule.**
+3. **For Event Source**
+   - Select **Event Pattern**
+   - Service Name: Auto Scaling
+   - Event Type: Instance Launch and Terminate
+   - Select **Specific instance ecent(s)** and choose "EC2 Instance-launch Lifecycle Action" and "EC2 Instance-terminate Lifecycle Action"
+   - Select **Specific group names** and add your Auto Scaling Group (MY-ASG-Group-Name in our sample)
+4. **For Targets**
+   - Click **Add Target***
+   - Select **Lambda function**
+   - Choose the Lambda function name we created in the drop down menu (AutoScaling-GlobalAccelerator)
+5. Choose **Configure details**.
+6. For **Rule definition**
+   - Enter a name for the rule (AutoScaling-GlobalAccelerator-Rule for example)
+   - Enter a description
+   - Keep the State checked (Enabled)
+7. Click **Create rule**
 
 ## Testing and reviewing the logs
 To test, simply edit your Auto Scaling group to increase the desired size, causing an instance to be added to the group, and then decrease the desired size to remove instances from the Auto Scaling group. The following CLI command will return the list of the endpoints attached to the endpoint group:
