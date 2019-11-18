@@ -6,7 +6,7 @@ or in the "license" file accompanying this file. This file is distributed on an 
 '''
 
 
-import boto3, 
+import boto3
 import hashlib
 import json
 import logging
@@ -24,8 +24,8 @@ CLIENT_IP_PRESERVATION = True
 
 def lambda_handler(event, context):
     # print(("Received event: " + json.dumps(event, indent=2)))
-    detail_type = event['detail-type'] # "EC2 Instance Terminate Successful" OR "EC2 Instance Launch Successful"
-    ec2_instance = event['detail']['EC2InstanceId']
+    Lifecycle_Hook_Name = event['LifecycleHookName'] # "ASG-AGA-Hook-Launching" OR "ASG-AGA-Hook-Terminaning",
+    ec2_instance = event['EC2InstanceId']
     # return detail_type
     
     response = aga_client.describe_endpoint_group(
@@ -34,13 +34,13 @@ def lambda_handler(event, context):
 
     endpoints = []
     
-    if detail_type == 'EC2 Instance Launch Successful': # Add the endpoint to the Accelerator
+    if Lifecycle_Hook_Name == 'ASG-AGA-Hook-Launching': # Add the endpoint to the Accelerator
         for EndpointID in response['EndpointGroup']['EndpointDescriptions']:
             result = {'EndpointId': EndpointID['EndpointId'],'Weight': EndpointID['Weight'],'ClientIPPreservationEnabled': CLIENT_IP_PRESERVATION}
             endpoints.append(result)
         # Endpoint to add
         endpoints.append({'EndpointId': ec2_instance,'Weight': ENDPOINT_WEIGHT,'ClientIPPreservationEnabled': CLIENT_IP_PRESERVATION})
-    elif detail_type == 'EC2 Instance Terminate Successful': # Remove the endpoint from the Accelerator
+    elif Lifecycle_Hook_Name == 'ASG-AGA-Hook-Terminaning': # Remove the endpoint from the Accelerator
         for EndpointID in response['EndpointGroup']['EndpointDescriptions']:
             if EndpointID['EndpointId'] != ec2_instance:
                 result = {'EndpointId': EndpointID['EndpointId'],'Weight': EndpointID['Weight'],'ClientIPPreservationEnabled': CLIENT_IP_PRESERVATION}
