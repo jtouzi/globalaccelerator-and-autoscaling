@@ -81,7 +81,7 @@ $ aws iam put-role-policy \
 
 ## Step 2 - Put the lifecycle hooks
 
-### 1. Hook for instance terminating
+1. Hook for instance terminating
 ```
 $ aws autoscaling put-lifecycle-hook \
 	--lifecycle-hook-name ASG-AGA-Hook-Terminating \
@@ -90,7 +90,7 @@ $ aws autoscaling put-lifecycle-hook \
 	--heartbeat-timeout 90
 ```
 
-### 2. Hook for instance launching
+2. Hook for instance launching
 ```
 $ aws autoscaling put-lifecycle-hook \
 	--lifecycle-hook-name ASG-AGA-Hook-Launching \
