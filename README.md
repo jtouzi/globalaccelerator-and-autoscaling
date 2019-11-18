@@ -1,9 +1,9 @@
 ## Using AWS Lambda to automatically update Global Accelerator EC2 endpoints launched or terminated by Auto Scaling
 
 ## Introduction
-AWS Global Accelerator is a service that improves the availability and performance of your applications with local or global users. It provides static IP addresses that act as a fixed entry point to your application endpoints in a single or multiple AWS Regions, such as your Application Load Balancers, Network Load Balancers or Amazon EC2 instances. To front an EC2 instance with Global Accelerator, you simply create an accelerator and add the EC2 instance as an endpoint using the EC2 instance ID. To control what internet traffic reaches your EC2 instance, you can use security groups in your VPC. Additionally, Global Accelerator preserves the source IP address of the client all the way to the EC2 instance, which enables you to apply client-specific logic and serve personalized content for your TCP and UDP applications.
+[AWS Global Accelerator](https://aws.amazon.com/global-accelerator/) is a service that improves the availability and performance of your applications with local or global users. It provides static IP addresses that act as a fixed entry point to your application endpoints in a single or multiple AWS Regions, such as your Application Load Balancers, Network Load Balancers or Amazon EC2 instances. To front an EC2 instance with Global Accelerator, you simply create an accelerator and add the EC2 instance as an endpoint using the EC2 instance ID. To control what internet traffic reaches your EC2 instance, you can use security groups in your VPC. Additionally, Global Accelerator preserves the source IP address of the client all the way to the EC2 instance, which enables you to apply client-specific logic and serve personalized content for your TCP and UDP applications.
 
-Some customers use AWS Auto Scaling service to automatically adjusts capacity to maintain steady, predictable performance at the lowest possible cost. The EC2 instances in an Auto Scaling group have a lifecycle that differs from that of other EC2 instances, it starts when the Auto Scaling group launches an instance and puts it into service, and ends when you terminate the instance, or the Auto Scaling group takes the instance out of service and terminates it. Currently AWS Global Accelerator does not support adding or removing EC2 endpoints to or from an endpoint group based on Auto Scaling events. In this blog post I will show you how to use AWS Lambda to automatically add EC2 endpoints to an endpoint group, or remove EC2 endpoints from an endpoint group based on Auto Scaling events. We recommend that you remove an EC2 instance from Global Accelerator endpoint groups before you terminate the instance, we will leverage Auto Scaling lifecycle hooks to remove an instance selected for termination from the endpoint group before it is terminated.
+Some customers use AWS Auto Scaling service to automatically adjusts capacity to maintain steady, predictable performance at the lowest possible cost. The EC2 instances in an Auto Scaling group have a lifecycle that differs from that of other EC2 instances, it starts when the Auto Scaling group launches an instance and puts it into service, and ends when you terminate the instance, or the Auto Scaling group takes the instance out of service and terminates it. Currently AWS Global Accelerator does not support adding or removing EC2 endpoints to or from an endpoint group based on Auto Scaling events. In this blog post I will show you how to use AWS Lambda to automatically add EC2 endpoints to an endpoint group, or remove EC2 endpoints from an endpoint group based on Auto Scaling events. We recommend that you remove an EC2 instance from Global Accelerator endpoint groups before you terminate the instance, we will leverage [Auto Scaling lifecycle hooks](https://docs.aws.amazon.com/autoscaling/ec2/userguide/lifecycle-hooks.html) to remove an instance selected for termination from the endpoint group before it is terminated.
 
 ## Prerequistites and Caveats
 Make sure you have the following completed:
@@ -153,7 +153,6 @@ $ aws iam put-role-policy \
 ### Hook for instance terminating
 ```
 $ aws autoscaling put-lifecycle-hook \
-$ aws autoscaling put-lifecycle-hook \
 --lifecycle-hook-name ASG-AGA-Hook-Terminating \
 --auto-scaling-group-name My-ASG-Group-Name \
 --notification-target-arn arn:aws:sns:us-west-2:0123456789012:AutoScaling-GlobalAccelerator-Topic \
@@ -191,7 +190,7 @@ The Lambda function uses modules included in the Python 3.7 Standard Library and
    - Existing role: AutoScaling-GlobalAccelerator-Lambda-Role (the role previously created).
 4. In Advanced settings, configure **Timeout for 5 minutes.**
 5. Choose **Create function.**
-6. Your function is created; for it code, copy and paste the [Lambda function](../autoscaling_globalaccelerator.py) from this GitHub repository.
+6. Your function is created; for it code, copy and paste the [Lambda function](autoscaling_globalaccelerator.py) from this GitHub repository.
 
 ## Step 5 - Configuring the SNS topic with the Lambda function
 Auto Scaling lifecycle hooks can send notifications to CloudWatch Events, SNS or SQS, we will use Amazon SNS. For this we will need to subscribe the Lambda function to the SNS topic and grant permissions on the lambda function to the SNS topic.
