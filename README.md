@@ -12,7 +12,76 @@ Make sure you have the following completed:
 - Your Autoscaling group is created and configured (note that the hook will only apply to new instances joining the pool).
 - Your accelerator is created.
 
-## Step 1 - Create and configure the Lambda Function’s IAM role
+## Step 1 – Create an SNS topic and configure an IAM role to allow the Auto Scaling service to post to the SNS topic
+
+### Create the SNS topic
+
+```
+aws sns create-topic --name AutoScaling-GlobalAccelerator-Topic
+```
+In the response, Note the ARN of the topic for later use.
+```
+{
+    "TopicArn": "arn:aws:sns:us-west-2:012345678901:AutoScaling-GlobalAccelerator-Topic"
+}
+```
+### Create and configure the IAM role
+
+The lifecycle hook uses an IAM role to send messages to SNS, we’ll need two policies to create the IAM role:
+- a trust (assumed role) policy allowing the Auto Scaling service to assume the role,
+- a role permission (inline policy) to publish to the SNS topic.
+
+#### Trust policy
+
+1. Create a text file called SNS-Role-Trust-Policy.json with the following content
+
+```
+{
+  "Version": "2012-10-17",
+  "Statement": [ {
+      "Sid": "",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "autoscaling.amazonaws.com"
+      },
+      "Action": "sts:AssumeRole"
+  } ]
+}
+```
+
+2. Create a policy with this trust policy
+```
+$ aws iam create-role \
+--role-name AutoScaling-GlobalAccelerator-Topic-Publisher-Role \
+--assume-role-policy-document file://SNS-Role-Trust-Policy.json
+```
+
+#### Inline policy
+
+1. Create a text file called SNS-Role-Inline-Policy.json with the following content
+
+```
+{
+  "Version": "2012-10-17",
+  "Statement": [ {
+      "Effect": "Allow",
+      "Resource": "arn:aws:sns:us-west-2:012345678901:AutoScaling-GlobalAccelerator-Topic",
+      "Action": [
+        "sns:Publish"
+      ]
+  } ]
+}
+```
+
+2. Apply the inline policy to the IAM role we just created
+```
+$ aws iam put-role-policy \
+--role-name AutoScaling-GlobalAccelerator-Topic-Publisher-Role \
+--policy-name AllowPublishToASGAGATopic \
+--policy-document file://SNS-Role-Inline-Policy.json
+```
+
+## Step 2 - Create and configure the Lambda Function’s IAM role
 
 We’ll need two policies:
 - a trust (assumed role) policy allowing the Lambda service to assume the role,
@@ -79,16 +148,32 @@ $ aws iam put-role-policy \
 	--policy-document file://Lambda-Role-Inline-Policy.json
 ```
 
-## Step 2 - Put the lifecycle hook for instance terminating
+## Step 3 - Put the lifecycle hooks
+
+### Hook for instance terminating
 ```
 $ aws autoscaling put-lifecycle-hook \
-	--lifecycle-hook-name ASG-AGA-Hook-Terminating \
-	--auto-scaling-group-name MY-ASG-Group-Name \
-	--lifecycle-transition autoscaling:EC2_INSTANCE_TERMINATING \
-	--heartbeat-timeout 90
+$ aws autoscaling put-lifecycle-hook \
+--lifecycle-hook-name ASG-AGA-Hook-Terminating \
+--auto-scaling-group-name My-ASG-Group-Name \
+--notification-target-arn arn:aws:sns:us-west-2:0123456789012:AutoScaling-GlobalAccelerator-Topic \
+--role-arn arn:aws:iam::0123456789012:role/AutoScaling-GlobalAccelerator-Topic-Publisher-Role \
+--lifecycle-transition autoscaling:EC2_INSTANCE_TERMINATING \
+--heartbeat-timeout 300
 ```
 
-## Step 3 - Create the Lambda function
+### Hook for instance launching
+```
+$ aws autoscaling put-lifecycle-hook \
+--lifecycle-hook-name ASG-AGA-Hook-Launching \
+--auto-scaling-group-name My-ASG-Group-Name \
+--notification-target-arn arn:aws:sns:us-west-2:0123456789012:AutoScaling-GlobalAccelerator-Topic \
+--role-arn arn:aws:iam::0123456789012:role/AutoScaling-GlobalAccelerator-Topic-Publisher-Role \
+--lifecycle-transition autoscaling:EC2_INSTANCE_LAUNCHING \
+--heartbeat-timeout 600
+```
+
+## Step 4 - Create the Lambda function
 
 The Lambda function uses modules included in the Python 3.7 Standard Library and the AWS SDK for Python module (boto3), which is preinstalled as part of Lambda. The function code performs the following:
 
@@ -122,7 +207,7 @@ $ aws lambda create-function \
 	--timeout 90
 ```
 
-## Step 4 - Configure CloudWatch Events to trigger the Lambda function
+## Step 5 - Configure CloudWatch Events to trigger the Lambda function
 
 1. Log in to the [CloudWatch console](https://us-west-2.console.aws.amazon.com/cloudwatch/home?region=us-west-2#rules:).
 2. Under **Events** on the left, select **Rules** and then click **Create rule.**
