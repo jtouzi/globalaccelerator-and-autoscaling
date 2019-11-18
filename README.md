@@ -18,9 +18,9 @@ We’ll need two policies:
 - a trust (assumed role) policy allowing the Lambda service to assume the role,
 - a role permission (inline policy) that defines what the Lambda function is allowed to do.
 
-#### Trust policy
+### Trust policy
 
-1. Create a text file called Lambda-Role-Trust-Policy.json with the following content
+#### Create a text file called Lambda-Role-Trust-Policy.json with the following content
 
 ```
 {
@@ -36,16 +36,16 @@ We’ll need two policies:
 }
 ```
 
-2. Create a policy with this trust policy
+#### Create a policy with this trust policy
 ```
 $ aws iam create-role \
 	--role-name AutoScaling-GlobalAccelerator-Lambda-Role \
 	--assume-role-policy-document file://Lambda-Role-Trust-Policy.json
 ```
 
-#### Inline policy
+### Inline policy
 
-1. Create a text file called Lambda-Role-Inline-Policy.json with the following content
+#### Create a text file called Lambda-Role-Inline-Policy.json with the following content
 
 ```
 {
@@ -71,7 +71,7 @@ $ aws iam create-role \
 }
 ```
 
-2. Apply the inline policy to the IAM role we just created
+#### Apply the inline policy to the IAM role we just created
 ```
 $ aws iam put-role-policy \
 	--role-name AutoScaling-GlobalAccelerator-Lambda-Role \
@@ -81,21 +81,23 @@ $ aws iam put-role-policy \
 
 ## Step 2 - Put the lifecycle hooks
 
-1. Hook for instance terminating
+### Hook for instance terminating
 ```
 $ aws autoscaling put-lifecycle-hook \
 	--lifecycle-hook-name ASG-AGA-Hook-Terminating \
 	--auto-scaling-group-name MY-ASG-Group-Name \
 	--lifecycle-transition autoscaling:EC2_INSTANCE_TERMINATING \
+	--default-result CONTINUE \
 	--heartbeat-timeout 90
 ```
 
-2. Hook for instance launching
+### Hook for instance launching
 ```
 $ aws autoscaling put-lifecycle-hook \
 	--lifecycle-hook-name ASG-AGA-Hook-Launching \
 	--auto-scaling-group-name My-ASG-Group-Name \
 	--lifecycle-transition autoscaling:EC2_INSTANCE_LAUNCHING \
+	--default-result CONTINUE \
 	--heartbeat-timeout 120
 ```
 
