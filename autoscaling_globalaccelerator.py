@@ -24,9 +24,8 @@ CLIENT_IP_PRESERVATION = True
 
 def lambda_handler(event, context):
     # print(("Received event: " + json.dumps(event, indent=2)))
-    Lifecycle_Hook_Name = event['details']['LifecycleHookName'] # "ASG-AGA-Launching" OR "ASG-AGA-Terminaning",
-    ec2_instance = event['details']['EC2InstanceId']
-    # return detail_type
+    Lifecycle_Hook_Name = event['detail']['LifecycleHookName'] # "ASG-AGA-Launching" OR "ASG-AGA-Terminaning",
+    ec2_instance = event['detail']['EC2InstanceId']
     
     response = aga_client.describe_endpoint_group(
         EndpointGroupArn = ENDPOINT_GROUP_ARN
