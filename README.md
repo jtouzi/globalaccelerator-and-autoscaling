@@ -157,8 +157,6 @@ $ aws lambda create-function \
 
 > Note: The following command should perform the same action
 
-Create the Rule
-
 Create a text file called eventPattern.json with the following content:
 ```
 {
