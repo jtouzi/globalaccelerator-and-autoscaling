@@ -79,24 +79,13 @@ $ aws iam put-role-policy \
 	--policy-document file://Lambda-Role-Inline-Policy.json
 ```
 
-## Step 2 - Put the lifecycle hooks
-
-### Hook for instance terminating
+## Step 2 - Put the lifecycle hook for instance terminating
 ```
 $ aws autoscaling put-lifecycle-hook \
 	--lifecycle-hook-name ASG-AGA-Hook-Terminating \
 	--auto-scaling-group-name MY-ASG-Group-Name \
 	--lifecycle-transition autoscaling:EC2_INSTANCE_TERMINATING \
 	--heartbeat-timeout 90
-```
-
-### Hook for instance launching
-```
-$ aws autoscaling put-lifecycle-hook \
-	--lifecycle-hook-name ASG-AGA-Hook-Launching \
-	--auto-scaling-group-name My-ASG-Group-Name \
-	--lifecycle-transition autoscaling:EC2_INSTANCE_LAUNCHING \
-	--heartbeat-timeout 120
 ```
 
 ## Step 3 - Create the Lambda function
@@ -141,7 +130,7 @@ $ aws lambda create-function \
    - Select **Event Pattern**
    - Service Name: Auto Scaling
    - Event Type: Instance Launch and Terminate
-   - Select **Specific instance ecent(s)** and choose "EC2 Instance-launch Lifecycle Action" and "EC2 Instance-terminate Lifecycle Action"
+   - Select **Specific instance ecent(s)** and choose "EC2 Instance Launch Successful" and "EC2 Instance-terminate Lifecycle Action"
    - Select **Specific group names** and add your Auto Scaling Group (MY-ASG-Group-Name in our sample)
 4. **For Targets**
    - Click **Add Target**
