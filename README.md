@@ -87,7 +87,6 @@ $ aws autoscaling put-lifecycle-hook \
 	--lifecycle-hook-name ASG-AGA-Hook-Terminating \
 	--auto-scaling-group-name MY-ASG-Group-Name \
 	--lifecycle-transition autoscaling:EC2_INSTANCE_TERMINATING \
-	--default-result CONTINUE \
 	--heartbeat-timeout 90
 ```
 
@@ -97,7 +96,6 @@ $ aws autoscaling put-lifecycle-hook \
 	--lifecycle-hook-name ASG-AGA-Hook-Launching \
 	--auto-scaling-group-name My-ASG-Group-Name \
 	--lifecycle-transition autoscaling:EC2_INSTANCE_LAUNCHING \
-	--default-result CONTINUE \
 	--heartbeat-timeout 120
 ```
 
