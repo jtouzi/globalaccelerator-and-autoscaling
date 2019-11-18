@@ -119,7 +119,7 @@ The Lambda function uses modules included in the Python 3.7 Standard Library and
 5. Choose **Create function.**
 6. Your function is created; for it code, copy and paste the [Lambda function](autoscaling_globalaccelerator.py) from this GitHub repository.
 
-> Note: The following command should perform the same action (download autoscaling_globalaccelerator.py and zip the file):
+> Note: The following command should perform the same action (download autoscaling_globalaccelerator.py and zip the file)
 
 ```
 $ zip autoscaling_globalaccelerator.zip autoscaling_globalaccelerator.py
@@ -157,7 +157,7 @@ $ aws lambda create-function \
 
 > Note: The following command should perform the same action
 
-### 1. Create the Rule
+Create the Rule
 
 Create a text file called eventPattern.json with the following content:
 ```
@@ -176,7 +176,7 @@ $ aws events put-rule \
 	--event-pattern file://eventPattern.json
 ```
 
-### 2. Add the Lambda function as Target for the Rule
+Add the Lambda function as Target for the Rule
 ```
 $ aws events put-targets
 	--rule AutoScaling-GlobalAccelerator-Rule \
