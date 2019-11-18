@@ -39,8 +39,8 @@ We’ll need two policies:
 2. Create a policy with this trust policy
 ```
 $ aws iam create-role \
---role-name AutoScaling-GlobalAccelerator-Lambda-Role \
---assume-role-policy-document file://Lambda-Role-Trust-Policy.json
+	--role-name AutoScaling-GlobalAccelerator-Lambda-Role \
+	--assume-role-policy-document file://Lambda-Role-Trust-Policy.json
 ```
 
 #### Inline policy
@@ -74,9 +74,9 @@ $ aws iam create-role \
 2. Apply the inline policy to the IAM role we just created
 ```
 $ aws iam put-role-policy \
---role-name AutoScaling-GlobalAccelerator-Lambda-Role \
---policy-name AutoScalingGlobalAcceleratorWithLogging \
---policy-document file://Lambda-Role-Inline-Policy.json
+	--role-name AutoScaling-GlobalAccelerator-Lambda-Role \
+	--policy-name AutoScalingGlobalAcceleratorWithLogging \
+	--policy-document file://Lambda-Role-Inline-Policy.json
 ```
 
 ## Step 2 - Put the lifecycle hooks
@@ -84,19 +84,19 @@ $ aws iam put-role-policy \
 ### 1. Hook for instance terminating
 ```
 $ aws autoscaling put-lifecycle-hook \
---lifecycle-hook-name ASG-AGA-Hook-Terminating \
---auto-scaling-group-name MY-ASG-Group-Name \
---lifecycle-transition autoscaling:EC2_INSTANCE_TERMINATING \
---heartbeat-timeout 90
+	--lifecycle-hook-name ASG-AGA-Hook-Terminating \
+	--auto-scaling-group-name MY-ASG-Group-Name \
+	--lifecycle-transition autoscaling:EC2_INSTANCE_TERMINATING \
+	--heartbeat-timeout 90
 ```
 
 ### 2. Hook for instance launching
 ```
 $ aws autoscaling put-lifecycle-hook \
---lifecycle-hook-name ASG-AGA-Hook-Launching \
---auto-scaling-group-name My-ASG-Group-Name \
---lifecycle-transition autoscaling:EC2_INSTANCE_LAUNCHING \
---heartbeat-timeout 120
+	--lifecycle-hook-name ASG-AGA-Hook-Launching \
+	--auto-scaling-group-name My-ASG-Group-Name \
+	--lifecycle-transition autoscaling:EC2_INSTANCE_LAUNCHING \
+	--heartbeat-timeout 120
 ```
 
 ## Step 3 - Create the Lambda function
@@ -115,7 +115,7 @@ The Lambda function uses modules included in the Python 3.7 Standard Library and
    - Runtime: Python 3.7.
    - Role: Choose an existing role.
    - Existing role: AutoScaling-GlobalAccelerator-Lambda-Role (the role previously created).
-4. In Advanced settings, configure **Timeout for 5 minutes.**
+4. In Advanced settings, configure **Timeout for 90 seconds.**
 5. Choose **Create function.**
 6. Your function is created; for it code, copy and paste the [Lambda function](autoscaling_globalaccelerator.py) from this GitHub repository.
 
@@ -124,13 +124,13 @@ The Lambda function uses modules included in the Python 3.7 Standard Library and
 ```
 $ zip autoscaling_globalaccelerator.zip autoscaling_globalaccelerator.py
 $ aws lambda create-function \
-    --function-name AutoScaling-GlobalAccelerator \
-    --runtime Python 3.7 \
-    --zip-file fileb://autoscaling_globalaccelerator.zip \
-    --handler my-function.handler \
-    --role arn:aws:iam::012345678901:role/AutoScaling-GlobalAccelerator-Lambda-Role \
-    --handler AutoScaling-GlobalAccelerator.handler \
-    --timeout 90
+	--function-name AutoScaling-GlobalAccelerator \
+	--runtime Python 3.7 \
+	--zip-file fileb://autoscaling_globalaccelerator.zip \
+	--handler my-function.handler \
+	--role arn:aws:iam::012345678901:role/AutoScaling-GlobalAccelerator-Lambda-Role \
+	--handler AutoScaling-GlobalAccelerator.handler \
+	--timeout 90
 ```
 
 ## Step 4 - Configure CloudWatch Events to trigger the Lambda function
@@ -187,5 +187,6 @@ $ aws events put-targets
 To test, simply edit your Auto Scaling group to increase the desired size, causing an instance to be added to the group, and then decrease the desired size to remove instances from the Auto Scaling group. The following CLI command will return the list of the endpoints attached to the endpoint group:
 
 ```
-$ aws globalaccelerator describe-endpoint-group --endpoint-group-arn arn:aws:globalaccelerator::012345678901:accelerator/c9d8f18d-e6a7-4f28-ae95-261507146530/listener/461df876/endpoint-group/c3770cbbf005 --region us-west-2
+$ aws globalaccelerator describe-endpoint-group \
+	--endpoint-group-arn arn:aws:globalaccelerator::012345678901:accelerator/c9d8f18d-e6a7-4f28-ae95-261507146530/listener/461df876/endpoint-group/c3770cbbf005
 ```
