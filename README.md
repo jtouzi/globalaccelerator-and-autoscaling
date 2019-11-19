@@ -153,13 +153,12 @@ $ aws iam put-role-policy \
 ### Hook for instance terminating
 ```
 $ aws autoscaling put-lifecycle-hook \
-$ aws autoscaling put-lifecycle-hook \
 --lifecycle-hook-name ASG-AGA-Hook-Terminating \
 --auto-scaling-group-name My-ASG-Group-Name \
 --notification-target-arn arn:aws:sns:us-west-2:0123456789012:AutoScaling-GlobalAccelerator-Topic \
 --role-arn arn:aws:iam::0123456789012:role/AutoScaling-GlobalAccelerator-Topic-Publisher-Role \
 --lifecycle-transition autoscaling:EC2_INSTANCE_TERMINATING \
---heartbeat-timeout 300
+--heartbeat-timeout 90
 ```
 
 ### Hook for instance launching
@@ -170,7 +169,7 @@ $ aws autoscaling put-lifecycle-hook \
 --notification-target-arn arn:aws:sns:us-west-2:0123456789012:AutoScaling-GlobalAccelerator-Topic \
 --role-arn arn:aws:iam::0123456789012:role/AutoScaling-GlobalAccelerator-Topic-Publisher-Role \
 --lifecycle-transition autoscaling:EC2_INSTANCE_LAUNCHING \
---heartbeat-timeout 600
+--heartbeat-timeout 120
 ```
 
 ## Step 4 - Create the Lambda function
