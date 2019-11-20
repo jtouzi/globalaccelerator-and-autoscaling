@@ -77,7 +77,7 @@ Create a text file called Lambda-Role-Inline-Policy.json with the following cont
 	]
 }
 ```
-Note: For the Global Accelerator actions, you can update the Resource from "\*\" to the endpoint ARN.
+> Note: For the Global Accelerator actions, you can update the Resource from "\*\" to the endpoint ARN.
 
 Attach the inline policy to the IAM role we just created:
 ```
