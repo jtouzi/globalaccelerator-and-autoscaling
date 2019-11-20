@@ -41,8 +41,8 @@ Create a text file called Lambda-Role-Trust-Policy.json with the following conte
 Create a policy with this trust policy:
 ```
 $ aws iam create-role \
---role-name ASG_AGA-Lambda-Role \
---assume-role-policy-document file://Lambda-Role-Trust-Policy.json
+	--role-name ASG_AGA-Lambda-Role \
+	--assume-role-policy-document file://Lambda-Role-Trust-Policy.json
 ```
 
 ### Inline policy
@@ -82,15 +82,17 @@ Note: For the Global Accelerator actions, you can update the Resource from "\*\"
 Attach the inline policy to the IAM role we just created:
 ```
 $ aws iam put-role-policy \
---role-name ASG_AGA-Lambda-Role \
---policy-name AutoScalingGlobalAcceleratorWithLogging \
---policy-document file://Lambda-Role-Inline-Policy.json
-Step 2 - Put the lifecycle hook for instance terminating
+	--role-name ASG_AGA-Lambda-Role \
+	--policy-name AutoScalingGlobalAcceleratorWithLogging \
+	--policy-document file://Lambda-Role-Inline-Policy.json
+```
+## Step 2 - Put the lifecycle hook for instance terminating
+```
 $ aws autoscaling put-lifecycle-hook \
---lifecycle-hook-name ASG-AGA-Terminating \
---auto-scaling-group-name My-ASG-Group-Name \
---lifecycle-transition autoscaling:EC2_INSTANCE_TERMINATING \
---heartbeat-timeout 60
+	--lifecycle-hook-name ASG-AGA-Terminating \
+	--auto-scaling-group-name My-ASG-Group-Name \
+	--lifecycle-transition autoscaling:EC2_INSTANCE_TERMINATING \
+	--heartbeat-timeout 60
 ```
 
 ## Step 3 - Create the Lambda function
@@ -215,12 +217,12 @@ Zip the file and use the CLI command below to create the lambda function with t
 ```
 $ zip asg_aga_function.zip asg_aga_function.py
 $ aws lambda create-function \
---function-name ASG_AGA-Function \
---runtime Python 3.7 \
---zip-file fileb://asg_aga_function.zip \
---role arn:aws:iam::123456789012:role/ASG_AGA-Lambda-Role \
---handler asg_aga_function.handler \
---timeout 30
+	--function-name ASG_AGA-Function \
+	--runtime Python 3.7 \
+	--zip-file fileb://asg_aga_function.zip \
+	--role arn:aws:iam::123456789012:role/ASG_AGA-Lambda-Role \
+	--handler asg_aga_function.handler \
+	--timeout 30
 ```
 
 ## Step 4 - Configure CloudWatch Events to trigger the Lambda function
@@ -232,18 +234,37 @@ Create a text file called eventPattern.json with the following content:
 	"source": ["aws.autoscaling"],
 	"detail-type": ["EC2 Instance-launch Lifecycle Action", "EC2 Instance-terminate Lifecycle Action"],
 	"detail": {
-		"AutoScalingGroupName": ["MY-ASG-Group-Name"]
+		"AutoScalingGroupName": ["<MY-ASG-Group-Name>"]
 	}
 }
 ```
 Use the event pattern to create the rule as follows:
 ```
 $ aws events put-rule \
---name ASG-AGA-Rule \
---event-pattern file://eventPattern.json
+	--name ASG-AGA-Rule \
+	--event-pattern file://eventPattern.json
 Add the Lambda function as Target for the Rule:
 
 $ aws events put-targets
---rule ASG-AGA-Rule \
---targets "Id"="1","Arn"="arn:aws:lambda:us-west-2:123456789012:function:ASG_AGA-Function"
+	--rule ASG-AGA-Rule \
+	--targets "Id"="1","Arn"="arn:aws:lambda:us-west-2:123456789012:function:ASG_AGA-Function"
 ```
+## Step 5 - Test the environment
+From the [Auto Scaling console](https://console.aws.amazon.com/ec2), you can change the desired capacity and the minimum for your Auto Scaling group to 0 so that the instance running starts being terminated. If any of these instances were endpoints for the accelerator endpoint group, you will notice that before they are terminated, they will be removed from the endpoint group. You can then change the Autoscaling group desired capacity and the minimum to the one expected, you will notice that the EC2 instances are added to the endpoint group as soon as they are successfully launched.
+
+To test this with the CLI:
+Update the Autoscaling group minimum and desired capacity:
+```
+$ aws autoscaling update-auto-scaling-group \
+	--auto-scaling-group-name <MY-ASG-Group-Name> \
+	--min-size 0 --desired-capacity 0
+```
+Describe the endpoint group:
+```
+$ aws globalaccelerator describe-endpoint-group \
+	--endpoint-group-arn <MyEndpointGroupARN> \
+	--region us-west-2
+```
+Increase the minimum and desired capacity and describe the endpoint group to see the changes.
+
+If it does not work as expected, eview your [CloudWatch logs](https://console.aws.amazon.com/cloudwatch/home?#logs:) to see the Lambda output. In the CloudWatch console, choose Logs and /aws/lambda/ASG_AGA-Function to see the execution output.
