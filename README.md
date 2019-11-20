@@ -133,8 +133,9 @@ Use the event pattern to create the rule as follows:
 $ aws events put-rule \
 	--name ASG-AGA-Rule \
 	--event-pattern file://eventPattern.json
+```
 Add the Lambda function as Target for the Rule:
-
+```
 $ aws events put-targets
 	--rule ASG-AGA-Rule \
 	--targets "Id"="1","Arn"="arn:aws:lambda:us-west-2:123456789012:function:ASG_AGA-Function"
