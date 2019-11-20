@@ -1,0 +1,127 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  EndpointGroupARN:
+    Type: String
+    Description: Accelerator Endpoint ARN (not the Accelerator ARN), make sure it is configured for endpoints in this region; it should look like 'arn:aws:globalaccelerator::123456789012:accelerator/c9d8f18d-e6a7-4f28-ae95-261507146530/listener/461df876/endpoint-group/c3770cbbf005'
+  EndpointWeight:
+    Type: Number
+    Default: 128
+    MinValue: 1
+    MaxValue: 255
+    Description: Endpoint Weight for the EC2 instances in the Autoscaling group.
+  ClientIpPreservation:
+    Type: String
+    Default: "True"
+    AllowedValues:
+      - "True"
+      - "False"
+    Description: Client IP Preservation for the EC2 instances in the Autoscaling group.
+  S3BucketName:
+    Type: String
+    Description: The S3 bucket where the code has been uploaded - make sure the bucket is in the same region as the Lambda function.
+  S3ObjectName:
+    Type: String
+    Description: The key name of the code in the S3 bucket (example path/to/asg_aga_function.zip).
+  AutoscalingGroupName:
+    Type: String
+    Description: Autoscaling group name
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: AWS Global Accelerator parameters
+        Parameters:
+          - EndpointGroupARN
+          - EndpointWeight
+          - ClientIpPreservation
+      -
+        Label:
+          default: S3 bucket and Key of the Lambda function code
+        Parameters:
+          - S3BucketName
+          - S3ObjectName
+Resources:
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - 'lambda.amazonaws.com'
+          Action:
+            - sts:AssumeRole
+      Policies:
+        -
+          PolicyName: AutoScaling-GlobalAccelerator-Lambda-Policy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - autoscaling:CompleteLifecycleAction
+                Resource:
+                  - '*'
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - globalaccelerator:UpdateEndpointGroup
+                  - globalaccelerator:DescribeEndpointGroup
+                Resource:
+                  - !Ref EndpointGroupARN
+  LifecycleHook:
+      Type: AWS::AutoScaling::LifecycleHook
+      Properties:
+        AutoScalingGroupName: !Ref AutoscalingGroupName
+        LifecycleTransition: autoscaling:EC2_INSTANCE_TERMINATING
+        HeartbeatTimeout: 30
+  Function:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Lambda function to automatically add/remove EC2 Endpoints to/from an AWS Global Accelerator Endpoint Group based on Autoscaling group events.
+      Code:
+        S3Bucket: !Ref S3BucketName
+        S3Key: !Ref S3ObjectName
+      Environment:
+        Variables:
+          EndpointGroupARN: !Ref EndpointGroupARN
+          EndpointWeight: !Ref EndpointWeight
+          ClientIpPreservation: !Ref ClientIpPreservation
+      Handler: asg_aga_function.lambda_handler
+      ReservedConcurrentExecutions: 1
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: python3.7
+      Timeout: 30
+  Permission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !GetAtt Function.Arn
+      Principal: events.amazonaws.com
+  Rule:
+    Type: AWS::Events::Rule
+    Properties:
+      EventPattern:
+          source:
+            - aws.autoscaling
+          detail-type:
+            - 'EC2 Instance-terminate Lifecycle Action'
+            - 'EC2 Instance Launch Successful'
+          detail:
+            AutoScalingGroupName:
+              - !Ref AutoscalingGroupName
+      Targets:
+      - Arn: !GetAtt Function.Arn
+        Id: target
