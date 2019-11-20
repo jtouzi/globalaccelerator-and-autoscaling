@@ -141,7 +141,7 @@ $ aws events put-targets
 	--targets "Id"="1","Arn"="arn:aws:lambda:us-west-2:123456789012:function:ASG_AGA-Function"
 ```
 ## Step 5 - Test the environment
-From the [Auto Scaling console](https://console.aws.amazon.com/ec2), you can change the desired capacity and the minimum for your Auto Scaling group to 0 so that the instance running starts being terminated. If any of these instances were endpoints for the accelerator endpoint group, you will notice that before they are terminated, they will be removed from the endpoint group. You can then change the Autoscaling group desired capacity and the minimum to the one expected, you will notice that the EC2 instances are added to the endpoint group as soon as they are successfully launched.
+From the [Auto Scaling console](https://console.aws.amazon.com/ec2/autoscaling), you can change the desired capacity and the minimum for your Auto Scaling group to 0 so that the instance running starts being terminated. If any of these instances were endpoints for the accelerator endpoint group, you will notice that before they are terminated, they will be removed from the endpoint group. You can then change the Autoscaling group desired capacity and the minimum to the one expected, you will notice that the EC2 instances are added to the endpoint group as soon as they are successfully launched.
 
 To test this with the CLI:
 Update the Autoscaling group minimum and desired capacity:
@@ -158,4 +158,4 @@ $ aws globalaccelerator describe-endpoint-group \
 ```
 Increase the minimum and desired capacity and describe the endpoint group to see the changes.
 
-If it does not work as expected, eview your [CloudWatch logs](https://console.aws.amazon.com/cloudwatch/home?#logs:) to see the Lambda output. In the CloudWatch console, choose Logs and /aws/lambda/ASG_AGA-Function to see the execution output.
+If it does not work as expected, review the [CloudWatch logs](https://console.aws.amazon.com/cloudwatch/home?#logs:) to see the Lambda output. In the CloudWatch console, choose Logs and /aws/lambda/ASG_AGA-Function to see the execution output.
