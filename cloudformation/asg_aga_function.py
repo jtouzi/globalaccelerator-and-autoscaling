@@ -17,10 +17,18 @@ logger.setLevel(logging.DEBUG)
 
 aga_client = boto3.client('globalaccelerator', region_name='us-west-2')
 
-# Accelerator Parameters
-ENDPOINT_GROUP_ARN = os.environ['EndpointGroupARN']
-ENDPOINT_WEIGHT = int(os.environ['EndpointWeight']) # Applies only to the new EC2 endpoint
-CLIENT_IP_PRESERVATION = eval(os.environ['ClientIpPreservation']) # Applies only to the new EC2 endpoint
+# Getting the Accelerator parameters passed in by the environment variables.
+ENDPOINT_GROUP_ARN = os.environ['EndpointGroupARN'] # String | Endpoint ARN (not the Accelerator ARN), make sure it is configured for endpoints in this region; it should look like 'arn:aws:globalaccelerator::123456789012:accelerator/c9d8f18d-e6a7-4f28-ae95-261507146530/listener/461df876/endpoint-group/c3770cbbf005'
+
+if (os.environ.get('EndpointWeight') != None) and isinstance(int(os.environ['EndpointWeight']), int) and int(os.environ['EndpointWeight']) < 256: # Number | Applies only to the new EC2 endpoint.
+    ENDPOINT_WEIGHT = int(os.environ['EndpointWeight'])
+else:
+    ENDPOINT_WEIGHT = 128 # Default is 128
+
+if (os.environ.get('ClientIpPreservation') != None) and ((os.environ['ClientIpPreservation'] == 'True') or (os.environ['ClientIpPreservation'] == 'False')): # True or False | Applies only to the new EC2 endpoint.
+    CLIENT_IP_PRESERVATION = eval(os.environ['ClientIpPreservation'])
+else:
+    CLIENT_IP_PRESERVATION = True # Default is True
 
 DETAIL_TYPE = "detail-type"
 LIFECYCLE_HOOK_NAME = "LifecycleHookName"
