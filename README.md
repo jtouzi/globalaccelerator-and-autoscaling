@@ -5,6 +5,9 @@
 
 Applications running on [Amazon EC2 instances can be directly fronted by AWS Global Accelerator](https://aws.amazon.com/about-aws/whats-new/2019/10/aws-global-accelerator-supports-ec2-instance-endpoints/). Some customers use AWS Auto Scaling service to automatically adjusts capacity to maintain steady, predictable performance at the lowest possible cost. The EC2 instances in an Auto Scaling group have a lifecycle that differs from that of other EC2 instances, it starts when the Auto Scaling group launches an instance and puts it into service, and ends when you terminate the instance, or the Auto Scaling group takes the instance out of service and terminates it. Currently AWS Global Accelerator does not support out of the box adding/removing EC2 endpoints to/from an endpoint group based on Autoscaling events. In this blog post I will show you how to use AWS Lambda to automatically add EC2 endpoints to an endpoint group, or remove EC2 endpoints from an endpoint group based on Autoscaling group events. We recommend that you remove an EC2 instance from Global Accelerator endpoint groups before you terminate the instance, we will leverage [Auto Scaling lifecycle hooks](https://docs.aws.amazon.com/autoscaling/ec2/userguide/lifecycle-hooks.html) to remove an instance selected for termination from the endpoint group before it is terminated.
 
+## Solution Overview
+![Using AWS Lambda to automatically update AWS Global Accelerator EC2 endpoints based on AWS Autoscaling Groups events](https://jtouzi.s3.amazonaws.com/autoscaling_lambda_globalaccelerator.png)
+
 ## Prerequisites and Caveats
 Make sure you have the following completed:
 
