@@ -30,7 +30,7 @@ aga_client = boto3.client('globalaccelerator', region_name='us-west-2')
 # Getting the Accelerator parameters passed in by the environment variables.
 ENDPOINT_GROUP_ARN = os.environ['EndpointGroupARN'] # String | Endpoint ARN (not the Accelerator ARN), make sure it is configured for endpoints in this region; it should look like 'arn:aws:globalaccelerator::123456789012:accelerator/c9d8f18d-e6a7-4f28-ae95-261507146530/listener/461df876/endpoint-group/c3770cbbf005'
 
-if (os.environ.get('EndpointWeight') != None) and isinstance(int(os.environ['EndpointWeight']), int) and int(os.environ['EndpointWeight']) < 256: # Number | Applies only to the new EC2 endpoint.
+if (os.environ.get('EndpointWeight') != None) and os.environ['EndpointWeight'].isdigit() and int(os.environ['EndpointWeight']) < 256: # Number | Applies only to the new EC2 endpoint.
     ENDPOINT_WEIGHT = int(os.environ['EndpointWeight'])
 else:
     ENDPOINT_WEIGHT = 128 # Default is 128
@@ -46,12 +46,9 @@ EC2_ID = "EC2InstanceId"
 ASG_GROUP = "AutoScalingGroupName"
 
 def check_response(response_json):
-    try:
-        if response_json['ResponseMetadata']['HTTPStatusCode'] == 200:
-            return True
-        else:
-            return False
-    except KeyError:
+    if response_json.get('ResponseMetadata', {}).get('HTTPStatusCode') == 200:
+        return True
+    else:
         return False
 
 def list_endpoints(): # List all the endpoints associated to the endpoint group - Important because the endpoint group may have other endpoints that are not member of the autoscaling group.
