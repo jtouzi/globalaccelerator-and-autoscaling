@@ -27,23 +27,14 @@ logger.setLevel(logging.DEBUG)
 
 aga_client = boto3.client('globalaccelerator', region_name='us-west-2')
 
-# Getting the Accelerator parameters passed in by the environment variables.
-ENDPOINT_GROUP_ARN = os.environ['EndpointGroupARN'] # String | Endpoint ARN (not the Accelerator ARN), make sure it is configured for endpoints in this region; it should look like 'arn:aws:globalaccelerator::123456789012:accelerator/c9d8f18d-e6a7-4f28-ae95-261507146530/listener/461df876/endpoint-group/c3770cbbf005'
+EC2_LAUNCHING = 'EC2 Instance Launch Successful'
+EC2_TERMINATING = 'EC2 Instance-terminate Lifecycle Action'
+ENDPOINT_GROUP_ARN = os.environ['EndpointGroupARN']
 
-if (os.environ.get('EndpointWeight') != None) and os.environ['EndpointWeight'].isdigit() and int(os.environ['EndpointWeight']) < 256: # Number | Applies only to the new EC2 endpoint.
+if (os.environ.get('EndpointWeight') != None) and os.environ['EndpointWeight'].isdigit() and int(os.environ['EndpointWeight']) < 256:
     ENDPOINT_WEIGHT = int(os.environ['EndpointWeight'])
 else:
-    ENDPOINT_WEIGHT = 128 # Default is 128
-
-if (os.environ.get('ClientIpPreservation') != None) and ((os.environ['ClientIpPreservation'] == 'True') or (os.environ['ClientIpPreservation'] == 'False')): # True or False | Applies only to the new EC2 endpoint.
-    CLIENT_IP_PRESERVATION = eval(os.environ['ClientIpPreservation'])
-else:
-    CLIENT_IP_PRESERVATION = True # Default is True
-
-DETAIL_TYPE = "detail-type"
-LIFECYCLE_HOOK_NAME = "LifecycleHookName"
-EC2_ID = "EC2InstanceId"
-ASG_GROUP = "AutoScalingGroupName"
+    ENDPOINT_WEIGHT = 128
 
 def check_response(response_json):
     if response_json.get('ResponseMetadata', {}).get('HTTPStatusCode') == 200:
@@ -51,44 +42,25 @@ def check_response(response_json):
     else:
         return False
 
-def list_endpoints(): # List all the endpoints associated to the endpoint group - Important because the endpoint group may have other endpoints that are not member of the autoscaling group.
+def list_endpoints():
     response = aga_client.describe_endpoint_group(
         EndpointGroupArn = ENDPOINT_GROUP_ARN
     )
     return response
 
-def abandon_lifecycle(life_cycle_hook, auto_scaling_group, instance_id):
-    asg_client = boto3.client('autoscaling')
-    try:
-        response = asg_client.complete_lifecycle_action(
-            LifecycleHookName = life_cycle_hook,
-            AutoScalingGroupName = auto_scaling_group,
-            LifecycleActionResult = 'ABANDON',
-            InstanceId = instance_id
-            )
-        if check_response(response):
-            logger.info("Lifecycle hook abandoned correctly: %s", response)
-        else:
-            logger.error("Lifecycle hook could not be abandoned: %s", response)
-    except Exception as e:
-        logger.error("Lifecycle hook abandon could not be executed: %s", str(e))
-        return None
-
 def updated_endpoints_list(detail_type, instance_id):
     endpoints = []
     response = list_endpoints()
 
-    if detail_type == 'EC2 Instance Launch Successful': # Add the endpoint to the Accelerator
+    if detail_type == EC2_LAUNCHING:
         for EndpointID in response['EndpointGroup']['EndpointDescriptions']:
             result = {'EndpointId': EndpointID['EndpointId'],'Weight': EndpointID['Weight']}
             endpoints.append(result)
+        endpoints.append({'EndpointId': instance_id,'Weight': ENDPOINT_WEIGHT}) # Add the endpoint
 
-        # Endpoint to add
-        endpoints.append({'EndpointId': instance_id,'Weight': ENDPOINT_WEIGHT,'ClientIPPreservationEnabled': CLIENT_IP_PRESERVATION})
-
-    elif detail_type == 'EC2 Instance-terminate Lifecycle Action': # Remove the endpoint from the Accelerator
+    elif detail_type == EC2_TERMINATING:
         for EndpointID in response['EndpointGroup']['EndpointDescriptions']:
-            if EndpointID['EndpointId'] != instance_id: # Remove the endpoint from the list of endpoints
+            if EndpointID['EndpointId'] != instance_id: # Remove the endpoint
                 result = {'EndpointId': EndpointID['EndpointId'],'Weight': EndpointID['Weight']}
                 endpoints.append(result)
     return endpoints
@@ -113,16 +85,24 @@ def lambda_handler(event, context):
     try:
         logger.info(json.dumps(event))
         message = event['detail']
-        detail_type = event[DETAIL_TYPE]
-        if ASG_GROUP in message:
-            instance_id = message[EC2_ID]
+        detail_type = event['detail-type']
+        if 'AutoScalingGroupName' in message:
+            instance_id = message['EC2InstanceId']
             response = update_endpoint_group(detail_type, instance_id)
             if response != None:
                 logging.info("Lambda executed correctly")
-            elif detail_type == 'EC2 Instance-terminate Lifecycle Action':
-                auto_scaling_group = message[ASG_GROUP]
-                life_cycle_hook = message[LIFECYCLE_HOOK_NAME]
-                abandon_lifecycle(life_cycle_hook, auto_scaling_group, instance_id)
+            elif detail_type == EC2_TERMINATING: # Abandon the lifecycle hook action
+				asg_client = boto3.client('autoscaling')
+				abandon_lifecycle = asg_client.complete_lifecycle_action(
+					LifecycleHookName = message['LifecycleHookName'],
+					AutoScalingGroupName = message['AutoScalingGroupName'],
+					LifecycleActionResult = 'ABANDON',
+					InstanceId = instance_id
+					)
+				if check_response(abandon_lifecycle):
+					logger.info("Lifecycle hook abandoned correctly: %s", response)
+				else:
+					logger.error("Lifecycle hook could not be abandoned: %s", response)
         else:
             logging.error("No valid JSON message: %s", parsed_message)
     except Exception as e:
