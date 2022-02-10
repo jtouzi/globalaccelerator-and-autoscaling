@@ -128,7 +128,7 @@ Resources:
                     for EndpointID in response['EndpointGroup']['EndpointDescriptions']:
                         result = {'EndpointId': EndpointID['EndpointId'],'Weight': EndpointID['Weight']}
                         endpoints.append(result)
-                    endpoints.append({'EndpointId': instance_id,'Weight': endpoint_weight()}) # Add the endpoint
+                    endpoints.append({'EndpointId': instance_id,'Weight': ENDPOINT_WEIGHT}) # Add the endpoint
 
                 elif detail_type == EC2_TERMINATING:
                     for EndpointID in response['EndpointGroup']['EndpointDescriptions']:
